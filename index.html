@@ -34,11 +34,11 @@
     }
     #game-area {display: flex;gap: 20px;align-items: flex-start;justify-content: center;}
     #game-board, #hold-board, #next-board {display: grid;background: #ffcc80;border-radius: 25px;padding: 8px;box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);}
-    #game-board {grid-template-columns: repeat(10, 2.5vmin);grid-template-rows: repeat(20, 2.5vmin);gap: 1px;position: relative;}
+    #game-board {grid-template-columns: repeat(10, 2.5vmin);grid-template-rows: repeat(20, 2.5vmin);gap: 1px;}
     #hold-board, #next-board {grid-template-columns: repeat(4, 2.5vmin);grid-template-rows: repeat(4, 2.5vmin);width: calc(4 * 2.5vmin + 16px);height: calc(4 * 2.5vmin + 16px);margin: 5px auto;}
     .cell {width: 2.5vmin;height: 2.5vmin;background: #ffe0b2;border-radius: 4px;transition: transform 0.1s ease, background 0.2s ease;}
     .tetromino {border: 1px solid rgba(255, 255, 255, 0.9);background: rgba(255, 255, 255, 0.4);border-radius: 4px;transform: scale(1.05);}
-    .ghost {opacity: 0.4;border: 1px dashed rgba(255, 255, 255, 0.7);}
+    .ghost {border: 1px dashed rgba(255, 255, 255, 0.7);background: rgba(255, 255, 255, 0.3);opacity: 0.6;border-radius: 4px;}
     #score, #level {font-size: 1.5rem;font-weight: 600;color: #4a3c31;text-align: center;margin: 5px 0;}
     .info-text {font-size: 1rem;color: #6d4c41;font-weight: 600;text-align: center;margin: 5px 0;}
     #controls {display: flex;flex-wrap: wrap;gap: 8px;justify-content: center;max-width: 100%;}
@@ -147,7 +147,6 @@
       clear: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-08-903_200x200.mp3'),
       drop: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-09-389_200x200.mp3')
     };
-
     function createPiece() {
       const randomIndex = Math.floor(Math.random() * tetrominoes.length);
       const piece = tetrominoes[randomIndex];
@@ -158,81 +157,40 @@
         y: 0
       };
     }
-
     function getGhostPosition() {
-      let ghostY = currentPiece.y;
-      while (true) {
-        ghostY++;
-        currentPiece.y = ghostY;
-        if (isCollision()) {
-          ghostY--;
-          break;
-        }
+      const ghost = { ...currentPiece, y: currentPiece.y };
+      while (!isCollision(ghost)) {
+        ghost.y++;
       }
-      currentPiece.y = ghostY;
-      const ghostX = currentPiece.x;
-      // Reset to original position
-      currentPiece.y = ghostY - (ghostY - currentPiece.y);
-      return { x: ghostX, y: ghostY };
+      ghost.y--;
+      return ghost;
     }
-
     function drawBoard() {
       const gameBoard = document.getElementById('game-board');
       gameBoard.innerHTML = '';
-      
-      // Draw the board cells
+      const ghost = getGhostPosition();
       for (let y = 0; y < boardHeight; y++) {
         for (let x = 0; x < boardWidth; x++) {
           const cell = document.createElement('div');
           cell.classList.add('cell');
+          let isGhost = false;
+          if (!board[y][x] && ghost.shape[y - ghost.y]?.[x - ghost.x] && !(currentPiece.shape[y - currentPiece.y]?.[x - currentPiece.x])) {
+            cell.style.backgroundColor = ghost.color;
+            cell.classList.add('ghost');
+            isGhost = true;
+          }
           if (board[y][x]) {
             cell.style.backgroundColor = board[y][x];
             cell.classList.add('tetromino');
           }
+          if (isGhost && board[y][x]) {
+            cell.classList.remove('ghost');
+            cell.style.opacity = '1';
+          }
           gameBoard.appendChild(cell);
         }
       }
-      
-      // Draw ghost piece
-      if (!isPaused && currentPiece) {
-        const ghostPos = getGhostPosition();
-        currentPiece.shape.forEach((row, y) => {
-          row.forEach((value, x) => {
-            if (value) {
-              const boardY = ghostPos.y + y;
-              const boardX = ghostPos.x + x;
-              if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-                const index = boardY * boardWidth + boardX;
-                if (index >= 0 && index < gameBoard.children.length) {
-                  gameBoard.children[index].style.backgroundColor = currentPiece.color;
-                  gameBoard.children[index].classList.add('ghost');
-                }
-              }
-            }
-          });
-        });
-      }
-      
-      // Draw current piece
-      if (currentPiece) {
-        currentPiece.shape.forEach((row, y) => {
-          row.forEach((value, x) => {
-            if (value) {
-              const boardY = currentPiece.y + y;
-              const boardX = currentPiece.x + x;
-              if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-                const index = boardY * boardWidth + boardX;
-                if (index >= 0 && index < gameBoard.children.length) {
-                  gameBoard.children[index].style.backgroundColor = currentPiece.color;
-                  gameBoard.children[index].classList.add('tetromino');
-                }
-              }
-            }
-          });
-        });
-      }
     }
-
     function drawHoldBoard() {
       const holdBoard = document.getElementById('hold-board');
       holdBoard.innerHTML = '';
@@ -248,7 +206,6 @@
         }
       }
     }
-
     function drawNextBoard() {
       const nextBoard = document.getElementById('next-board');
       nextBoard.innerHTML = '';
@@ -264,7 +221,6 @@
         }
       }
     }
-
     function drawPiece() {
       currentPiece.shape.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -278,7 +234,6 @@
         });
       });
     }
-
     function clearPiece() {
       currentPiece.shape.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -292,7 +247,6 @@
         });
       });
     }
-
     function movePiece(dx, dy) {
       if (isPaused) return;
       clearPiece();
@@ -318,7 +272,6 @@
       drawBoard();
       if (dx !== 0 || dy !== 0) sounds.move.play();
     }
-
     function rotatePiece() {
       if (isPaused) return;
       clearPiece();
@@ -335,12 +288,11 @@
       drawPiece();
       drawBoard();
     }
-
-    function isCollision() {
-      return currentPiece.shape.some((row, y) =>
+    function isCollision(piece = currentPiece) {
+      return piece.shape.some((row, y) =>
         row.some((value, x) => {
-          const boardY = currentPiece.y + y;
-          const boardX = currentPiece.x + x;
+          const boardY = piece.y + y;
+          const boardX = piece.x + x;
           return (value && (
             boardY >= boardHeight ||
             boardX < 0 ||
@@ -350,7 +302,6 @@
         })
       );
     }
-
     function placePiece() {
       currentPiece.shape.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -364,7 +315,6 @@
         });
       });
     }
-
     function clearLines() {
       let linesCleared = 0;
       for (let y = boardHeight - 1; y >= 0; y--) {
@@ -386,7 +336,6 @@
         }
       }
     }
-
     function dropPiece() {
       if (isPaused) return;
       clearPiece();
@@ -408,7 +357,6 @@
       drawBoard();
       sounds.drop.play();
     }
-
     function storePiece() {
       if (isPaused || !canStorePiece) return;
       clearPiece();
@@ -427,7 +375,6 @@
       drawPiece();
       drawBoard();
     }
-
     function togglePause() {
       isPaused = !isPaused;
       document.querySelector('#controls button:last-child').textContent = isPaused ? '▶ Resume' : '⏯ Pause';
@@ -436,13 +383,11 @@
         gameLoop(lastTime);
       }
     }
-
     function endGame() {
       cancelAnimationFrame(animationFrameId);
       document.getElementById('game-over').style.display = 'flex';
       document.getElementById('final-score').textContent = score;
     }
-
     function restartGame() {
       board.forEach(row => row.fill(0));
       score = 0;
@@ -463,7 +408,6 @@
       lastTime = performance.now();
       gameLoop(lastTime);
     }
-
     function gameLoop(time) {
       if (isPaused) return;
       const delta = time - lastTime;
@@ -473,7 +417,6 @@
       }
       animationFrameId = requestAnimationFrame(gameLoop);
     }
-
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') movePiece(-1, 0);
       if (e.key === 'ArrowRight') movePiece(1, 0);
@@ -483,7 +426,6 @@
       if (e.key === 'c' || e.key === 'C') storePiece();
       if (e.key === 'p' || e.key === 'P') togglePause();
     });
-
     function startGame() {
       currentPiece = createPiece();
       nextPiece = createPiece();
@@ -492,7 +434,6 @@
       lastTime = performance.now();
       gameLoop(lastTime);
     }
-
     startGame();
   </script>
 </body>
