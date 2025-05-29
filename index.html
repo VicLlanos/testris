@@ -165,32 +165,37 @@
       ghost.y--;
       return ghost;
     }
-    function drawBoard() {
-      const gameBoard = document.getElementById('game-board');
-      gameBoard.innerHTML = '';
-      const ghost = getGhostPosition();
-      for (let y = 0; y < boardHeight; y++) {
-        for (let x = 0; x < boardWidth; x++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          let isGhost = false;
-          if (!board[y][x] && ghost.shape[y - ghost.y]?.[x - ghost.x] && !(currentPiece.shape[y - currentPiece.y]?.[x - currentPiece.x])) {
-            cell.style.backgroundColor = ghost.color;
-            cell.classList.add('ghost');
-            isGhost = true;
-          }
-          if (board[y][x]) {
-            cell.style.backgroundColor = board[y][x];
-            cell.classList.add('tetromino');
-          }
-          if (isGhost && board[y][x]) {
-            cell.classList.remove('ghost');
-            cell.style.opacity = '1';
-          }
-          gameBoard.appendChild(cell);
-        }
+function drawBoard() {
+  const gameBoard = document.getElementById('game-board');
+  gameBoard.innerHTML = '';
+
+  const ghost = getGhostPosition();
+
+  for (let y = 0; y < boardHeight; y++) {
+    for (let x = 0; x < boardWidth; x++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+
+      const inGhost = ghost.shape[y - ghost.y]?.[x - ghost.x];
+      const inCurrent = currentPiece.shape[y - currentPiece.y]?.[x - currentPiece.x];
+      const placed = board[y][x];
+
+      if (placed) {
+        cell.style.backgroundColor = placed;
+        cell.classList.add('tetromino');
+      } else if (inGhost && !inCurrent) {
+        cell.style.backgroundColor = ghost.color;
+        cell.classList.add('ghost');
+      } else if (inCurrent) {
+        cell.style.backgroundColor = currentPiece.color;
+        cell.classList.add('tetromino');
       }
+
+      gameBoard.appendChild(cell);
     }
+  }
+}
+
     function drawHoldBoard() {
       const holdBoard = document.getElementById('hold-board');
       holdBoard.innerHTML = '';
