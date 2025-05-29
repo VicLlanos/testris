@@ -122,53 +122,56 @@
     <div>Score: <span id="final-score">0</span></div>
     <button onclick="restartGame()">Restart</button>
   </div>
-  <script>
-    const boardWidth = 10;
-    const boardHeight = 20;
-    const board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
-    let currentPiece, nextPiece, storedPiece = null;
-    let canStorePiece = true;
-    let score = 0, level = 1;
-    let isPaused = false;
-    let lastTime = 0, dropInterval = 500;
-    let animationFrameId;
-    const tetrominoes = [
-      { shape: [[1, 1, 1, 1]], color: '#00f0f0' },
-      { shape: [[1, 1], [1, 1]], color: '#f0f000' },
-      { shape: [[0, 1, 0], [1, 1, 1]], color: '#a000f0' },
-      { shape: [[1, 1, 0], [0, 1, 1]], color: '#00f000' },
-      { shape: [[0, 1, 1], [1, 1, 0]], color: '#f00000' },
-      { shape: [[1, 0, 0], [1, 1, 1]], color: '#0000f0' },
-      { shape: [[0, 0, 1], [1, 1, 1]], color: '#f0a000' }
-    ];
-    const sounds = {
-      move: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-07-741_200x200.mp3'),
-      rotate: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-08-423_200x200.mp3'),
-      clear: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-08-903_200x200.mp3'),
-      drop: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-09-389_200x200.mp3')
-    };
-    function createPiece() {
-      const randomIndex = Math.floor(Math.random() * tetrominoes.length);
-      const piece = tetrominoes[randomIndex];
-      return {
-        shape: piece.shape.map(row => [...row]),
-        color: piece.color,
-        x: Math.floor((boardWidth - piece.shape[0].length) / 2),
-        y: 0
-      };
-    }
-    function getGhostPosition() {
-      const ghost = { ...currentPiece, y: currentPiece.y };
-      while (!isCollision(ghost)) {
-        ghost.y++;
-      }
-      ghost.y--;
-      return ghost;
-    }
+ <script>
+const boardWidth = 10;
+const boardHeight = 20;
+const board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
+let currentPiece, nextPiece, storedPiece = null;
+let canStorePiece = true;
+let score = 0, level = 1;
+let isPaused = false;
+let lastTime = 0, dropInterval = 500;
+let animationFrameId;
+
+const tetrominoes = [
+  { shape: [[1, 1, 1, 1]], color: '#00f0f0' },
+  { shape: [[1, 1], [1, 1]], color: '#f0f000' },
+  { shape: [[0, 1, 0], [1, 1, 1]], color: '#a000f0' },
+  { shape: [[1, 1, 0], [0, 1, 1]], color: '#00f000' },
+  { shape: [[0, 1, 1], [1, 1, 0]], color: '#f00000' },
+  { shape: [[1, 0, 0], [1, 1, 1]], color: '#0000f0' },
+  { shape: [[0, 0, 1], [1, 1, 1]], color: '#f0a000' }
+];
+
+const sounds = {
+  move: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-07-741_200x200.mp3'),
+  rotate: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-08-423_200x200.mp3'),
+  clear: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-08-903_200x200.mp3'),
+  drop: new Audio('https://cdn.pixabay.com/audio/2023/01/31/03-47-09-389_200x200.mp3')
+};
+
+function createPiece() {
+  const piece = tetrominoes[Math.floor(Math.random() * tetrominoes.length)];
+  return {
+    shape: piece.shape.map(row => [...row]),
+    color: piece.color,
+    x: Math.floor((boardWidth - piece.shape[0].length) / 2),
+    y: 0
+  };
+}
+
+function getGhostPosition() {
+  const ghost = { ...currentPiece, y: currentPiece.y };
+  while (!isCollision(ghost)) {
+    ghost.y++;
+  }
+  ghost.y--;
+  return ghost;
+}
+
 function drawBoard() {
   const gameBoard = document.getElementById('game-board');
   gameBoard.innerHTML = '';
-
   const ghost = getGhostPosition();
 
   for (let y = 0; y < boardHeight; y++) {
@@ -176,17 +179,17 @@ function drawBoard() {
       const cell = document.createElement('div');
       cell.classList.add('cell');
 
-      const inGhost = ghost.shape[y - ghost.y]?.[x - ghost.x];
-      const inCurrent = currentPiece.shape[y - currentPiece.y]?.[x - currentPiece.x];
-      const placed = board[y][x];
+      const isPlaced = board[y][x];
+      const isCurrent = currentPiece.shape[y - currentPiece.y]?.[x - currentPiece.x];
+      const isGhost = ghost.shape[y - ghost.y]?.[x - ghost.x];
 
-      if (placed) {
-        cell.style.backgroundColor = placed;
+      if (isPlaced) {
+        cell.style.backgroundColor = isPlaced;
         cell.classList.add('tetromino');
-      } else if (inGhost && !inCurrent) {
+      } else if (isGhost && !isCurrent) {
         cell.style.backgroundColor = ghost.color;
         cell.classList.add('ghost');
-      } else if (inCurrent) {
+      } else if (isCurrent) {
         cell.style.backgroundColor = currentPiece.color;
         cell.classList.add('tetromino');
       }
@@ -196,250 +199,231 @@ function drawBoard() {
   }
 }
 
-    function drawHoldBoard() {
-      const holdBoard = document.getElementById('hold-board');
-      holdBoard.innerHTML = '';
-      for (let y = 0; y < 4; y++) {
-        for (let x = 0; x < 4; x++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          if (storedPiece && storedPiece.shape[y]?.[x]) {
-            cell.style.backgroundColor = storedPiece.color;
-            cell.classList.add('tetromino');
-          }
-          holdBoard.appendChild(cell);
-        }
+function drawHoldBoard() {
+  const holdBoard = document.getElementById('hold-board');
+  holdBoard.innerHTML = '';
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      if (storedPiece && storedPiece.shape[y]?.[x]) {
+        cell.style.backgroundColor = storedPiece.color;
+        cell.classList.add('tetromino');
       }
+      holdBoard.appendChild(cell);
     }
-    function drawNextBoard() {
-      const nextBoard = document.getElementById('next-board');
-      nextBoard.innerHTML = '';
-      for (let y = 0; y < 4; y++) {
-        for (let x = 0; x < 4; x++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          if (nextPiece.shape[y]?.[x]) {
-            cell.style.backgroundColor = nextPiece.color;
-            cell.classList.add('tetromino');
-          }
-          nextBoard.appendChild(cell);
-        }
+  }
+}
+
+function drawNextBoard() {
+  const nextBoard = document.getElementById('next-board');
+  nextBoard.innerHTML = '';
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      if (nextPiece.shape[y]?.[x]) {
+        cell.style.backgroundColor = nextPiece.color;
+        cell.classList.add('tetromino');
       }
+      nextBoard.appendChild(cell);
     }
-    function drawPiece() {
-      currentPiece.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-          if (value) {
-            const boardY = currentPiece.y + y;
-            const boardX = currentPiece.x + x;
-            if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-              board[boardY][boardX] = currentPiece.color;
-            }
-          }
-        });
-      });
-    }
-    function clearPiece() {
-      currentPiece.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-          if (value) {
-            const boardY = currentPiece.y + y;
-            const boardX = currentPiece.x + x;
-            if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-              board[boardY][boardX] = 0;
-            }
-          }
-        });
-      });
-    }
-    function movePiece(dx, dy) {
-      if (isPaused) return;
-      clearPiece();
-      currentPiece.x += dx;
-      currentPiece.y += dy;
-      if (isCollision()) {
-        currentPiece.x -= dx;
-        currentPiece.y -= dy;
-        if (dy === 1) {
-          placePiece();
-          clearLines();
-          currentPiece = nextPiece;
-          nextPiece = createPiece();
-          canStorePiece = true;
-          drawNextBoard();
-          if (isCollision()) {
-            endGame();
-            return;
-          }
-        }
-      }
-      drawPiece();
-      drawBoard();
-      if (dx !== 0 || dy !== 0) sounds.move.play();
-    }
-    function rotatePiece() {
-      if (isPaused) return;
-      clearPiece();
-      const rotated = currentPiece.shape[0].map((_, i) =>
-        currentPiece.shape.map(row => row[i]).reverse()
-      );
-      const originalShape = currentPiece.shape;
-      currentPiece.shape = rotated;
-      if (isCollision()) {
-        currentPiece.shape = originalShape;
-      } else {
-        sounds.rotate.play();
-      }
-      drawPiece();
-      drawBoard();
-    }
-    function isCollision(piece = currentPiece) {
-      return piece.shape.some((row, y) =>
-        row.some((value, x) => {
-          const boardY = piece.y + y;
-          const boardX = piece.x + x;
-          return (value && (
-            boardY >= boardHeight ||
-            boardX < 0 ||
-            boardX >= boardWidth ||
-            (boardY >= 0 && board[boardY][boardX])
-          ));
-        })
-      );
-    }
-    function placePiece() {
-      currentPiece.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-          if (value) {
-            const boardY = currentPiece.y + y;
-            const boardX = currentPiece.x + x;
-            if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-              board[boardY][boardX] = currentPiece.color;
-            }
-          }
-        });
-      });
-    }
-    function clearLines() {
-      let linesCleared = 0;
-      for (let y = boardHeight - 1; y >= 0; y--) {
-        if (board[y].every(cell => cell)) {
-          board.splice(y, 1);
-          board.unshift(Array(boardWidth).fill(0));
-          linesCleared++;
-          y++;
-        }
-      }
-      if (linesCleared > 0) {
-        score += linesCleared * 10 * level;
-        document.getElementById('score').textContent = `⭐ Score: ${score}`;
-        sounds.clear.play();
-        if (score >= level * 100) {
-          level++;
-          document.getElementById('level').textContent = `📈 Level: ${level}`;
-          dropInterval = Math.max(100, 500 - (level - 1) * 50);
-        }
-      }
-    }
-    function dropPiece() {
-      if (isPaused) return;
-      clearPiece();
-      while (!isCollision()) {
-        currentPiece.y++;
-      }
-      currentPiece.y--;
+  }
+}
+
+function movePiece(dx, dy) {
+  if (isPaused) return;
+  currentPiece.x += dx;
+  currentPiece.y += dy;
+
+  if (isCollision()) {
+    currentPiece.x -= dx;
+    currentPiece.y -= dy;
+    if (dy === 1) {
       placePiece();
       clearLines();
       currentPiece = nextPiece;
       nextPiece = createPiece();
       canStorePiece = true;
       drawNextBoard();
-      if (isCollision()) {
-        endGame();
-        return;
+      if (isCollision()) return endGame();
+    }
+  }
+
+  drawBoard();
+  if (dx !== 0 || dy !== 0) sounds.move.play();
+}
+
+function rotatePiece() {
+  if (isPaused) return;
+  const rotated = currentPiece.shape[0].map((_, i) =>
+    currentPiece.shape.map(row => row[i]).reverse()
+  );
+  const originalShape = currentPiece.shape;
+  currentPiece.shape = rotated;
+
+  if (isCollision()) {
+    currentPiece.shape = originalShape;
+  } else {
+    sounds.rotate.play();
+  }
+
+  drawBoard();
+}
+
+function isCollision(piece = currentPiece) {
+  return piece.shape.some((row, y) =>
+    row.some((value, x) => {
+      const boardY = piece.y + y;
+      const boardX = piece.x + x;
+      return (value && (
+        boardY >= boardHeight ||
+        boardX < 0 ||
+        boardX >= boardWidth ||
+        (boardY >= 0 && board[boardY][boardX])
+      ));
+    })
+  );
+}
+
+function placePiece() {
+  currentPiece.shape.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value) {
+        const boardY = currentPiece.y + y;
+        const boardX = currentPiece.x + x;
+        if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
+          board[boardY][boardX] = currentPiece.color;
+        }
       }
-      drawPiece();
-      drawBoard();
-      sounds.drop.play();
-    }
-    function storePiece() {
-      if (isPaused || !canStorePiece) return;
-      clearPiece();
-      if (storedPiece) {
-        const temp = storedPiece;
-        storedPiece = { shape: currentPiece.shape.map(row => [...row]), color: currentPiece.color };
-        currentPiece = { ...temp, x: Math.floor((boardWidth - temp.shape[0].length) / 2), y: 0 };
-      } else {
-        storedPiece = { shape: currentPiece.shape.map(row => [...row]), color: currentPiece.color };
-        currentPiece = nextPiece;
-        nextPiece = createPiece();
-        drawNextBoard();
-      }
-      canStorePiece = false;
-      drawHoldBoard();
-      drawPiece();
-      drawBoard();
-    }
-    function togglePause() {
-      isPaused = !isPaused;
-      document.querySelector('#controls button:last-child').textContent = isPaused ? '▶ Resume' : '⏯ Pause';
-      if (!isPaused) {
-        lastTime = performance.now();
-        gameLoop(lastTime);
-      }
-    }
-    function endGame() {
-      cancelAnimationFrame(animationFrameId);
-      document.getElementById('game-over').style.display = 'flex';
-      document.getElementById('final-score').textContent = score;
-    }
-    function restartGame() {
-      board.forEach(row => row.fill(0));
-      score = 0;
-      level = 1;
-      storedPiece = null;
-      canStorePiece = true;
-      isPaused = false;
-      dropInterval = 500;
-      document.getElementById('score').textContent = `⭐ Score: ${score}`;
-      document.getElementById('level').textContent = `📈 Level: ${level}`;
-      document.getElementById('game-over').style.display = 'none';
-      document.querySelector('#controls button:last-child').textContent = '⏯ Pause';
-      drawHoldBoard();
-      currentPiece = createPiece();
-      nextPiece = createPiece();
-      drawNextBoard();
-      drawBoard();
-      lastTime = performance.now();
-      gameLoop(lastTime);
-    }
-    function gameLoop(time) {
-      if (isPaused) return;
-      const delta = time - lastTime;
-      if (delta >= dropInterval) {
-        movePiece(0, 1);
-        lastTime = time - (delta % dropInterval);
-      }
-      animationFrameId = requestAnimationFrame(gameLoop);
-    }
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') movePiece(-1, 0);
-      if (e.key === 'ArrowRight') movePiece(1, 0);
-      if (e.key === 'ArrowDown') movePiece(0, 1);
-      if (e.key === 'ArrowUp') rotatePiece();
-      if (e.key === ' ') dropPiece();
-      if (e.key === 'c' || e.key === 'C') storePiece();
-      if (e.key === 'p' || e.key === 'P') togglePause();
     });
-    function startGame() {
-      currentPiece = createPiece();
-      nextPiece = createPiece();
-      drawNextBoard();
-      drawBoard();
-      lastTime = performance.now();
-      gameLoop(lastTime);
+  });
+}
+
+function clearLines() {
+  let linesCleared = 0;
+  for (let y = boardHeight - 1; y >= 0; y--) {
+    if (board[y].every(cell => cell)) {
+      board.splice(y, 1);
+      board.unshift(Array(boardWidth).fill(0));
+      linesCleared++;
+      y++;
     }
-    startGame();
-  </script>
+  }
+
+  if (linesCleared > 0) {
+    score += linesCleared * 10 * level;
+    document.getElementById('score').textContent = `⭐ Score: ${score}`;
+    sounds.clear.play();
+    if (score >= level * 100) {
+      level++;
+      document.getElementById('level').textContent = `📈 Level: ${level}`;
+      dropInterval = Math.max(100, 500 - (level - 1) * 50);
+    }
+  }
+}
+
+function dropPiece() {
+  if (isPaused) return;
+  while (!isCollision()) {
+    currentPiece.y++;
+  }
+  currentPiece.y--;
+  placePiece();
+  clearLines();
+  currentPiece = nextPiece;
+  nextPiece = createPiece();
+  canStorePiece = true;
+  drawNextBoard();
+  if (isCollision()) return endGame();
+  drawBoard();
+  sounds.drop.play();
+}
+
+function storePiece() {
+  if (isPaused || !canStorePiece) return;
+  if (storedPiece) {
+    const temp = storedPiece;
+    storedPiece = { shape: currentPiece.shape.map(row => [...row]), color: currentPiece.color };
+    currentPiece = { ...temp, x: Math.floor((boardWidth - temp.shape[0].length) / 2), y: 0 };
+  } else {
+    storedPiece = { shape: currentPiece.shape.map(row => [...row]), color: currentPiece.color };
+    currentPiece = nextPiece;
+    nextPiece = createPiece();
+    drawNextBoard();
+  }
+  canStorePiece = false;
+  drawHoldBoard();
+  drawBoard();
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.querySelector('#controls button:last-child').textContent = isPaused ? '▶ Resume' : '⏯ Pause';
+  if (!isPaused) {
+    lastTime = performance.now();
+    gameLoop(lastTime);
+  }
+}
+
+function endGame() {
+  cancelAnimationFrame(animationFrameId);
+  document.getElementById('game-over').style.display = 'flex';
+  document.getElementById('final-score').textContent = score;
+}
+
+function restartGame() {
+  board.forEach(row => row.fill(0));
+  score = 0;
+  level = 1;
+  storedPiece = null;
+  canStorePiece = true;
+  isPaused = false;
+  dropInterval = 500;
+  document.getElementById('score').textContent = `⭐ Score: ${score}`;
+  document.getElementById('level').textContent = `📈 Level: ${level}`;
+  document.getElementById('game-over').style.display = 'none';
+  document.querySelector('#controls button:last-child').textContent = '⏯ Pause';
+  drawHoldBoard();
+  currentPiece = createPiece();
+  nextPiece = createPiece();
+  drawNextBoard();
+  drawBoard();
+  lastTime = performance.now();
+  gameLoop(lastTime);
+}
+
+function gameLoop(time) {
+  if (isPaused) return;
+  const delta = time - lastTime;
+  if (delta >= dropInterval) {
+    movePiece(0, 1);
+    lastTime = time - (delta % dropInterval);
+  }
+  animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') movePiece(-1, 0);
+  if (e.key === 'ArrowRight') movePiece(1, 0);
+  if (e.key === 'ArrowDown') movePiece(0, 1);
+  if (e.key === 'ArrowUp') rotatePiece();
+  if (e.key === ' ') dropPiece();
+  if (e.key === 'c' || e.key === 'C') storePiece();
+  if (e.key === 'p' || e.key === 'P') togglePause();
+});
+
+function startGame() {
+  currentPiece = createPiece();
+  nextPiece = createPiece();
+  drawNextBoard();
+  drawBoard();
+  lastTime = performance.now();
+  gameLoop(lastTime);
+}
+
+startGame();
+</script>
+
 </body>
 </html>
