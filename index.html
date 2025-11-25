@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2-Player Tetris Challenge</title>
+  <title>Multiplayer Tetris Challenge</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
     
@@ -60,6 +60,43 @@
       color: var(--accent-color);
       margin-bottom: 10px;
       text-align: center;
+    }
+
+    .multiplayer-section {
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+      width: 100%;
+    }
+
+    .connection-status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin: 5px 0;
+    }
+
+    .status-connected {
+      background: rgba(46, 204, 113, 0.3);
+      color: #2ecc71;
+      border: 1px solid #2ecc71;
+    }
+
+    .status-disconnected {
+      background: rgba(231, 76, 60, 0.3);
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+    }
+
+    .status-connecting {
+      background: rgba(241, 196, 15, 0.3);
+      color: #f1c40f;
+      border: 1px solid #f1c40f;
     }
 
     .players-container {
@@ -418,11 +455,6 @@
       border-radius: 50px;
     }
 
-    .garbage-line {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px dashed rgba(255, 255, 255, 0.5);
-    }
-
     .player-controls {
       display: flex;
       flex-direction: column;
@@ -434,6 +466,26 @@
       font-size: 1rem;
       color: var(--accent-color);
       text-align: center;
+    }
+
+    .player-status {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+      color: #ecf0f1;
+    }
+
+    .game-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      margin: 20px 0;
+    }
+
+    .garbage-line {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px dashed rgba(255, 255, 255, 0.5);
     }
 
     @media (max-width: 1024px) {
@@ -517,9 +569,31 @@
   <div id="game-container">
     <button class="how-to-play" onclick="showInstructions()">?</button>
     
-    <h1 class="game-title">2-Player Tetris Challenge</h1>
+    <h1 class="game-title">Multiplayer Tetris Challenge</h1>
     
-    <div class="players-container">
+    <div class="multiplayer-section">
+      <div class="mb-3">
+        <div class="connection-status" id="connection-status">Disconnected</div>
+      </div>
+      <div class="row" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+        <div>
+          <button class="btn btn-primary w-100 mb-2" id="host-game" style="background: var(--secondary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px;">Host Game</button>
+          <div id="host-info" style="display: none;">
+            <p class="mb-1">Share this ID:</p>
+            <h4 id="host-id" class="text-warning" style="color: var(--accent-color);"></h4>
+          </div>
+        </div>
+        <div>
+          <div class="input-group mb-2" style="display: flex;">
+            <input type="text" class="form-control" id="join-id" placeholder="Enter Host ID" style="border-radius: 8px 0 0 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
+            <button class="btn btn-outline-secondary" id="join-game" style="border-radius: 0 8px 8px 0; border: 1px solid var(--accent-color); color: var(--accent-color); background: transparent;">Join Game</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="start-game" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 10px; display: none;">Start Game</button>
+    </div>
+    
+    <div class="players-container" style="display: none;" id="game-players">
       <!-- Player 1 -->
       <div class="player-area player1">
         <div class="player-header">
@@ -613,7 +687,7 @@
       </div>
     </div>
     
-    <div id="controls">
+    <div id="controls" style="display: none;">
       <button onclick="togglePause()" class="secondary">PAUSE ⏸</button>
     </div>
     
@@ -630,7 +704,7 @@
   </div>
   
   <div id="instructions">
-    <h2>HOW TO PLAY 2-PLAYER TETRIS</h2>
+    <h2>HOW TO PLAY MULTIPLAYER TETRIS</h2>
     <h3>Player 1 Controls</h3>
     <ul>
       <li><strong>A/D</strong> Move piece left/right</li>
@@ -651,11 +725,25 @@
     <button onclick="hideInstructions()" class="close-btn">GOT IT!</button>
   </div>
 
+  <!-- Simple Peer library for WebRTC connections -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  
   <script>
     // Game constants
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 20;
     const PLAYER_COUNT = 2;
+
+    // Multiplayer State
+    const multiplayerState = {
+      peer: null,
+      conn: null,
+      isHost: false,
+      isConnected: false,
+      peerId: null,
+      remotePlayer: null,
+      gameStarted: false
+    };
 
     // Game state for both players
     const players = [
@@ -701,7 +789,233 @@
       { shape: [[0, 0, 1], [1, 1, 1]], color: 'L' }  // L
     ];
 
-    // Create a new piece
+    // DOM Elements
+    const connectionStatusEl = document.getElementById('connection-status');
+    const hostGameBtn = document.getElementById('host-game');
+    const joinGameBtn = document.getElementById('join-game');
+    const startGameBtn = document.getElementById('start-game');
+    const hostInfoEl = document.getElementById('host-info');
+    const hostIdEl = document.getElementById('host-id');
+    const joinIdEl = document.getElementById('join-id');
+    const gamePlayersEl = document.getElementById('game-players');
+    const controlsEl = document.getElementById('controls');
+    const gameOverEl = document.getElementById('game-over');
+    const winnerEl = document.getElementById('winner');
+
+    // Multiplayer Functions
+    function initializeMultiplayer() {
+      multiplayerState.peerId = 'tetris-' + Math.random().toString(36).substring(2, 9);
+      multiplayerState.peer = new Peer(multiplayerState.peerId, {
+        debug: 2,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+          ]
+        }
+      });
+
+      multiplayerState.peer.on('open', (id) => {
+        updateConnectionStatus('disconnected', 'Ready to connect');
+        console.log(`Your ID: ${id}`);
+      });
+
+      multiplayerState.peer.on('connection', (conn) => {
+        setupConnection(conn);
+        multiplayerState.isHost = true;
+        updateConnectionStatus('connected', 'Player connected!');
+        startGameBtn.style.display = 'block';
+        console.log('A Player has joined your game!');
+      });
+
+      multiplayerState.peer.on('error', (err) => {
+        console.error('PeerJS error:', err);
+        updateConnectionStatus('disconnected', 'Connection error');
+      });
+    }
+
+    function setupConnection(conn) {
+      multiplayerState.conn = conn;
+      multiplayerState.isConnected = true;
+      multiplayerState.remotePlayer = conn.peer;
+
+      conn.on('open', () => {
+        updateConnectionStatus('connected', 'Connected to player');
+        if (multiplayerState.isHost) {
+          sendGameState();
+        }
+      });
+
+      conn.on('data', (data) => {
+        handleIncomingData(data);
+      });
+
+      conn.on('close', () => {
+        multiplayerState.isConnected = false;
+        updateConnectionStatus('disconnected', 'Player disconnected');
+        console.log('Other player disconnected');
+      });
+
+      conn.on('error', (err) => {
+        console.error('Connection error:', err);
+        updateConnectionStatus('disconnected', 'Connection error');
+      });
+    }
+
+    function hostGame() {
+      multiplayerState.isHost = true;
+      hostInfoEl.style.display = 'block';
+      hostIdEl.textContent = multiplayerState.peerId;
+      updateConnectionStatus('connecting', 'Waiting for player...');
+      console.log('You are now the Host! Share your ID: ' + multiplayerState.peerId);
+    }
+
+    function joinGame() {
+      const hostId = joinIdEl.value.trim();
+      if (!hostId) {
+        alert('Please enter a host ID');
+        return;
+      }
+
+      multiplayerState.isHost = false;
+      const conn = multiplayerState.peer.connect(hostId);
+      setupConnection(conn);
+      updateConnectionStatus('connecting', 'Connecting to host...');
+      console.log(`Connecting to Host ${hostId}...`);
+    }
+
+    function startGame() {
+      if (!multiplayerState.isConnected) {
+        alert('No player connected yet!');
+        return;
+      }
+
+      multiplayerState.gameStarted = true;
+      gamePlayersEl.style.display = 'flex';
+      controlsEl.style.display = 'grid';
+      startGameBtn.style.display = 'none';
+      
+      // Initialize game for both players
+      players.forEach((player, index) => {
+        player.currentPiece = createPiece();
+        player.nextPiece = createPiece();
+        drawNextBoard(index);
+        drawBoard(index);
+        player.lastTime = performance.now();
+      });
+
+      // Start game loop
+      gameLoop(performance.now());
+
+      // Send start game signal to client
+      if (multiplayerState.isHost) {
+        sendAction('startGame');
+      }
+    }
+
+    function sendGameState() {
+      if (!multiplayerState.isConnected) return;
+      multiplayerState.conn.send({
+        type: 'gameState',
+        state: players,
+        garbageQueue: garbageQueue
+      });
+    }
+
+    function sendAction(action, data = {}) {
+      if (!multiplayerState.isConnected) return;
+      multiplayerState.conn.send({
+        type: 'action',
+        action: action,
+        data: data,
+        sender: multiplayerState.isHost ? 'host' : 'client'
+      });
+    }
+
+    function handleIncomingData(data) {
+      switch (data.type) {
+        case 'gameState':
+          if (!multiplayerState.isHost) {
+            Object.assign(players, data.state);
+            garbageQueue = data.garbageQueue || [0, 0];
+            updateUI();
+          }
+          break;
+        case 'action':
+          handleRemoteAction(data.action, data.data, data.sender);
+          break;
+      }
+    }
+
+    function handleRemoteAction(action, data, sender) {
+      switch (action) {
+        case 'startGame':
+          if (!multiplayerState.isHost) {
+            multiplayerState.gameStarted = true;
+            gamePlayersEl.style.display = 'flex';
+            controlsEl.style.display = 'grid';
+            startGameBtn.style.display = 'none';
+            
+            players.forEach((player, index) => {
+              player.currentPiece = createPiece();
+              player.nextPiece = createPiece();
+              drawNextBoard(index);
+              drawBoard(index);
+              player.lastTime = performance.now();
+            });
+            
+            gameLoop(performance.now());
+          }
+          break;
+        case 'movePiece':
+          if (multiplayerState.isHost) {
+            movePiece(data.playerIndex, data.dx, data.dy);
+            sendGameState();
+          }
+          break;
+        case 'rotatePiece':
+          if (multiplayerState.isHost) {
+            rotatePiece(data.playerIndex);
+            sendGameState();
+          }
+          break;
+        case 'dropPiece':
+          if (multiplayerState.isHost) {
+            dropPiece(data.playerIndex);
+            sendGameState();
+          }
+          break;
+        case 'storePiece':
+          if (multiplayerState.isHost) {
+            storePiece(data.playerIndex);
+            sendGameState();
+          }
+          break;
+        case 'gameOver':
+          endGame(data.winner);
+          break;
+      }
+    }
+
+    function updateConnectionStatus(status, message) {
+      connectionStatusEl.textContent = message;
+      connectionStatusEl.className = 'connection-status';
+      switch (status) {
+        case 'connected':
+          connectionStatusEl.classList.add('status-connected');
+          multiplayerState.isConnected = true;
+          break;
+        case 'disconnected':
+          connectionStatusEl.classList.add('status-disconnected');
+          multiplayerState.isConnected = false;
+          break;
+        case 'connecting':
+          connectionStatusEl.classList.add('status-connecting');
+          break;
+      }
+    }
+
+    // Game Functions
     function createPiece() {
       const piece = tetrominoes[Math.floor(Math.random() * tetrominoes.length)];
       return {
@@ -712,7 +1026,6 @@
       };
     }
 
-    // Get ghost position for a piece
     function getGhostPosition(playerIndex) {
       const player = players[playerIndex];
       const ghost = { ...player.currentPiece, y: player.currentPiece.y };
@@ -725,7 +1038,6 @@
       return ghost;
     }
 
-    // Draw the game board for a player
     function drawBoard(playerIndex) {
       const boardElement = document.getElementById(`player${playerIndex + 1}-board`);
       boardElement.innerHTML = '';
@@ -762,7 +1074,6 @@
       }
     }
 
-    // Get color for a tetromino type
     function getColor(type) {
       switch(type) {
         case 'I': return '#00C2D1';
@@ -776,7 +1087,6 @@
       }
     }
 
-    // Draw the hold board for a player
     function drawHoldBoard(playerIndex) {
       const holdBoard = document.getElementById(`player${playerIndex + 1}-hold-board`);
       holdBoard.innerHTML = '';
@@ -799,7 +1109,6 @@
       }
     }
 
-    // Draw the next board for a player
     function drawNextBoard(playerIndex) {
       const nextBoard = document.getElementById(`player${playerIndex + 1}-next-board`);
       nextBoard.innerHTML = '';
@@ -822,9 +1131,8 @@
       }
     }
 
-    // Move a piece for a player
     function movePiece(playerIndex, dx, dy) {
-      if (isPaused || players[playerIndex].isGameOver) return;
+      if (isPaused || players[playerIndex].isGameOver || !multiplayerState.gameStarted) return;
       
       const player = players[playerIndex];
       player.currentPiece.x += dx;
@@ -852,9 +1160,8 @@
       drawBoard(playerIndex);
     }
 
-    // Rotate a piece for a player
     function rotatePiece(playerIndex) {
-      if (isPaused || players[playerIndex].isGameOver) return;
+      if (isPaused || players[playerIndex].isGameOver || !multiplayerState.gameStarted) return;
       
       const player = players[playerIndex];
       const rotated = player.currentPiece.shape[0].map((_, i) =>
@@ -871,7 +1178,6 @@
       drawBoard(playerIndex);
     }
 
-    // Check for collision
     function isCollision(playerIndex, piece = players[playerIndex].currentPiece) {
       const player = players[playerIndex];
       
@@ -890,7 +1196,6 @@
       );
     }
 
-    // Place a piece on the board
     function placePiece(playerIndex) {
       const player = players[playerIndex];
       
@@ -908,7 +1213,6 @@
       });
     }
 
-    // Clear completed lines and send garbage
     function clearLines(playerIndex) {
       const player = players[playerIndex];
       let linesCleared = 0;
@@ -949,7 +1253,6 @@
       }
     }
 
-    // Add garbage lines to a player's board
     function addGarbageLines(playerIndex, lines) {
       const player = players[playerIndex];
       
@@ -969,9 +1272,8 @@
       drawBoard(playerIndex);
     }
 
-    // Hard drop for a player
     function dropPiece(playerIndex) {
-      if (isPaused || players[playerIndex].isGameOver) return;
+      if (isPaused || players[playerIndex].isGameOver || !multiplayerState.gameStarted) return;
       
       const player = players[playerIndex];
       
@@ -995,9 +1297,8 @@
       drawBoard(playerIndex);
     }
 
-    // Store a piece for a player
     function storePiece(playerIndex) {
-      if (isPaused || players[playerIndex].isGameOver || !players[playerIndex].canStorePiece) return;
+      if (isPaused || players[playerIndex].isGameOver || !players[playerIndex].canStorePiece || !multiplayerState.gameStarted) return;
       
       const player = players[playerIndex];
       
@@ -1027,7 +1328,6 @@
       drawBoard(playerIndex);
     }
 
-    // Toggle pause state
     function togglePause() {
       isPaused = !isPaused;
       
@@ -1039,32 +1339,28 @@
       }
     }
 
-    // Check if the game is over
     function checkGameOver() {
       const gameOverCount = players.filter(player => player.isGameOver).length;
       
       if (gameOverCount === PLAYER_COUNT) {
-        endGame();
+        endGame("It's a tie!");
+      } else if (players[0].isGameOver) {
+        endGame("Player 2 Wins!");
+      } else if (players[1].isGameOver) {
+        endGame("Player 1 Wins!");
       }
     }
 
-    // End the game
-    function endGame() {
+    function endGame(winnerText) {
       cancelAnimationFrame(animationFrameId);
+      winnerEl.textContent = winnerText;
+      gameOverEl.style.display = 'flex';
       
-      // Determine winner
-      let winnerText = "It's a tie!";
-      if (players[0].score > players[1].score) {
-        winnerText = "Player 1 Wins!";
-      } else if (players[1].score > players[0].score) {
-        winnerText = "Player 2 Wins!";
+      if (multiplayerState.isHost) {
+        sendAction('gameOver', { winner: winnerText });
       }
-      
-      document.getElementById('winner').textContent = winnerText;
-      document.getElementById('game-over').style.display = 'flex';
     }
 
-    // Restart the game
     function restartGame() {
       players.forEach((player, index) => {
         player.board = Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0));
@@ -1082,13 +1378,8 @@
         
         drawHoldBoard(index);
         
-        if (index === 0) {
-          player.currentPiece = createPiece();
-          player.nextPiece = createPiece();
-        } else {
-          player.currentPiece = createPiece();
-          player.nextPiece = createPiece();
-        }
+        player.currentPiece = createPiece();
+        player.nextPiece = createPiece();
         
         drawNextBoard(index);
         drawBoard(index);
@@ -1096,18 +1387,21 @@
       
       garbageQueue = [0, 0];
       isPaused = false;
-      document.getElementById('game-over').style.display = 'none';
+      gameOverEl.style.display = 'none';
       
       players.forEach((player, index) => {
         player.lastTime = performance.now();
       });
       
       gameLoop(performance.now());
+      
+      if (multiplayerState.isHost) {
+        sendGameState();
+      }
     }
 
-    // Game loop
     function gameLoop(time) {
-      if (isPaused) return;
+      if (isPaused || !multiplayerState.gameStarted) return;
       
       players.forEach((player, index) => {
         if (!player.isGameOver) {
@@ -1116,6 +1410,10 @@
           if (delta >= player.dropInterval) {
             movePiece(index, 0, 1);
             player.lastTime = time - (delta % player.dropInterval);
+            
+            if (multiplayerState.isHost) {
+              sendGameState();
+            }
           }
         }
       });
@@ -1123,55 +1421,98 @@
       animationFrameId = requestAnimationFrame(gameLoop);
     }
 
-    // Show instructions
+    function updateUI() {
+      players.forEach((player, index) => {
+        document.getElementById(`player${index + 1}-score`).textContent = player.score;
+        document.getElementById(`player${index + 1}-level`).textContent = player.level;
+        document.getElementById(`player${index + 1}-lines`).textContent = player.lines;
+      });
+    }
+
     function showInstructions() {
       document.getElementById('instructions').style.display = 'flex';
     }
 
-    // Hide instructions
     function hideInstructions() {
       document.getElementById('instructions').style.display = 'none';
     }
 
     // Keyboard controls
     document.addEventListener('keydown', (e) => {
+      if (!multiplayerState.gameStarted) return;
+      
       if (e.key === 'p' || e.key === 'P') {
         togglePause();
         return;
       }
       
       // Player 1 controls (WASD + Space + C)
-      if (e.key === 'a' || e.key === 'A') movePiece(0, -1, 0);
-      if (e.key === 'd' || e.key === 'D') movePiece(0, 1, 0);
-      if (e.key === 's' || e.key === 'S') movePiece(0, 0, 1);
-      if (e.key === 'w' || e.key === 'W') rotatePiece(0);
-      if (e.key === ' ') dropPiece(0);
-      if (e.key === 'c' || e.key === 'C') storePiece(0);
-      
-      // Player 2 controls (Arrow keys + Enter + Shift)
-      if (e.key === 'ArrowLeft') movePiece(1, -1, 0);
-      if (e.key === 'ArrowRight') movePiece(1, 1, 0);
-      if (e.key === 'ArrowDown') movePiece(1, 0, 1);
-      if (e.key === 'ArrowUp') rotatePiece(1);
-      if (e.key === 'Enter') dropPiece(1);
-      if (e.key === 'Shift') storePiece(1);
+      if (multiplayerState.isHost) {
+        if (e.key === 'a' || e.key === 'A') {
+          movePiece(0, -1, 0);
+          sendAction('movePiece', { playerIndex: 0, dx: -1, dy: 0 });
+        }
+        if (e.key === 'd' || e.key === 'D') {
+          movePiece(0, 1, 0);
+          sendAction('movePiece', { playerIndex: 0, dx: 1, dy: 0 });
+        }
+        if (e.key === 's' || e.key === 'S') {
+          movePiece(0, 0, 1);
+          sendAction('movePiece', { playerIndex: 0, dx: 0, dy: 1 });
+        }
+        if (e.key === 'w' || e.key === 'W') {
+          rotatePiece(0);
+          sendAction('rotatePiece', { playerIndex: 0 });
+        }
+        if (e.key === ' ') {
+          dropPiece(0);
+          sendAction('dropPiece', { playerIndex: 0 });
+        }
+        if (e.key === 'c' || e.key === 'C') {
+          storePiece(0);
+          sendAction('storePiece', { playerIndex: 0 });
+        }
+      } else {
+        // Player 2 controls (Arrow keys + Enter + Shift)
+        if (e.key === 'ArrowLeft') {
+          movePiece(1, -1, 0);
+          sendAction('movePiece', { playerIndex: 1, dx: -1, dy: 0 });
+        }
+        if (e.key === 'ArrowRight') {
+          movePiece(1, 1, 0);
+          sendAction('movePiece', { playerIndex: 1, dx: 1, dy: 0 });
+        }
+        if (e.key === 'ArrowDown') {
+          movePiece(1, 0, 1);
+          sendAction('movePiece', { playerIndex: 1, dx: 0, dy: 1 });
+        }
+        if (e.key === 'ArrowUp') {
+          rotatePiece(1);
+          sendAction('rotatePiece', { playerIndex: 1 });
+        }
+        if (e.key === 'Enter') {
+          dropPiece(1);
+          sendAction('dropPiece', { playerIndex: 1 });
+        }
+        if (e.key === 'Shift') {
+          storePiece(1);
+          sendAction('storePiece', { playerIndex: 1 });
+        }
+      }
     });
 
     // Initialize the game
-    function startGame() {
-      players.forEach((player, index) => {
-        player.currentPiece = createPiece();
-        player.nextPiece = createPiece();
-        drawNextBoard(index);
-        drawBoard(index);
-        player.lastTime = performance.now();
-      });
+    function init() {
+      initializeMultiplayer();
       
-      gameLoop(performance.now());
+      // Set up event listeners
+      hostGameBtn.addEventListener('click', hostGame);
+      joinGameBtn.addEventListener('click', joinGame);
+      startGameBtn.addEventListener('click', startGame);
     }
 
     // Start the game
-    startGame();
+    init();
   </script>
 </body>
 </html>
