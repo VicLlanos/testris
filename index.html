@@ -628,7 +628,7 @@
         </div>
         
         <div class="player-controls">
-          <h3>Player 1 Controls</h3>
+          <h3>Controls</h3>
           <div class="mobile-controls">
             <button onclick="movePiece(0, -1, 0)" class="mobile-btn secondary">←</button>
             <button onclick="movePiece(0, 0, 1)" class="mobile-btn">↓</button>
@@ -674,7 +674,7 @@
         </div>
         
         <div class="player-controls">
-          <h3>Player 2 Controls</h3>
+          <h3>Controls</h3>
           <div class="mobile-controls">
             <button onclick="movePiece(1, -1, 0)" class="mobile-btn secondary">←</button>
             <button onclick="movePiece(1, 0, 1)" class="mobile-btn">↓</button>
@@ -705,21 +705,14 @@
   
   <div id="instructions">
     <h2>HOW TO PLAY MULTIPLAYER TETRIS</h2>
-    <h3>Player 1 Controls</h3>
-    <ul>
-      <li><strong>A/D</strong> Move piece left/right</li>
-      <li><strong>S</strong> Soft drop (move down)</li>
-      <li><strong>W</strong> Rotate piece</li>
-      <li><strong>SPACE</strong> Hard drop</li>
-      <li><strong>C</strong> Hold piece</li>
-    </ul>
-    <h3>Player 2 Controls</h3>
+    <h3>Controls (Both Players)</h3>
     <ul>
       <li><strong>← →</strong> Move piece left/right</li>
       <li><strong>↓</strong> Soft drop (move down)</li>
       <li><strong>↑</strong> Rotate piece</li>
-      <li><strong>ENTER</strong> Hard drop</li>
+      <li><strong>SPACE</strong> Hard drop</li>
       <li><strong>SHIFT</strong> Hold piece</li>
+      <li><strong>P</strong> Pause game</li>
     </ul>
     <p>Complete lines to score points and send garbage lines to your opponent!</p>
     <button onclick="hideInstructions()" class="close-btn">GOT IT!</button>
@@ -742,7 +735,8 @@
       isConnected: false,
       peerId: null,
       remotePlayer: null,
-      gameStarted: false
+      gameStarted: false,
+      playerIndex: 0 // 0 for host, 1 for client
     };
 
     // Game state for both players
@@ -823,6 +817,7 @@
       multiplayerState.peer.on('connection', (conn) => {
         setupConnection(conn);
         multiplayerState.isHost = true;
+        multiplayerState.playerIndex = 0;
         updateConnectionStatus('connected', 'Player connected!');
         startGameBtn.style.display = 'block';
         console.log('A Player has joined your game!');
@@ -864,6 +859,7 @@
 
     function hostGame() {
       multiplayerState.isHost = true;
+      multiplayerState.playerIndex = 0;
       hostInfoEl.style.display = 'block';
       hostIdEl.textContent = multiplayerState.peerId;
       updateConnectionStatus('connecting', 'Waiting for player...');
@@ -878,6 +874,7 @@
       }
 
       multiplayerState.isHost = false;
+      multiplayerState.playerIndex = 1;
       const conn = multiplayerState.peer.connect(hostId);
       setupConnection(conn);
       updateConnectionStatus('connecting', 'Connecting to host...');
@@ -1437,7 +1434,7 @@
       document.getElementById('instructions').style.display = 'none';
     }
 
-    // Keyboard controls
+    // Unified keyboard controls for both players
     document.addEventListener('keydown', (e) => {
       if (!multiplayerState.gameStarted) return;
       
@@ -1446,58 +1443,33 @@
         return;
       }
       
-      // Player 1 controls (WASD + Space + C)
-      if (multiplayerState.isHost) {
-        if (e.key === 'a' || e.key === 'A') {
-          movePiece(0, -1, 0);
-          sendAction('movePiece', { playerIndex: 0, dx: -1, dy: 0 });
-        }
-        if (e.key === 'd' || e.key === 'D') {
-          movePiece(0, 1, 0);
-          sendAction('movePiece', { playerIndex: 0, dx: 1, dy: 0 });
-        }
-        if (e.key === 's' || e.key === 'S') {
-          movePiece(0, 0, 1);
-          sendAction('movePiece', { playerIndex: 0, dx: 0, dy: 1 });
-        }
-        if (e.key === 'w' || e.key === 'W') {
-          rotatePiece(0);
-          sendAction('rotatePiece', { playerIndex: 0 });
-        }
-        if (e.key === ' ') {
-          dropPiece(0);
-          sendAction('dropPiece', { playerIndex: 0 });
-        }
-        if (e.key === 'c' || e.key === 'C') {
-          storePiece(0);
-          sendAction('storePiece', { playerIndex: 0 });
-        }
-      } else {
-        // Player 2 controls (Arrow keys + Enter + Shift)
-        if (e.key === 'ArrowLeft') {
-          movePiece(1, -1, 0);
-          sendAction('movePiece', { playerIndex: 1, dx: -1, dy: 0 });
-        }
-        if (e.key === 'ArrowRight') {
-          movePiece(1, 1, 0);
-          sendAction('movePiece', { playerIndex: 1, dx: 1, dy: 0 });
-        }
-        if (e.key === 'ArrowDown') {
-          movePiece(1, 0, 1);
-          sendAction('movePiece', { playerIndex: 1, dx: 0, dy: 1 });
-        }
-        if (e.key === 'ArrowUp') {
-          rotatePiece(1);
-          sendAction('rotatePiece', { playerIndex: 1 });
-        }
-        if (e.key === 'Enter') {
-          dropPiece(1);
-          sendAction('dropPiece', { playerIndex: 1 });
-        }
-        if (e.key === 'Shift') {
-          storePiece(1);
-          sendAction('storePiece', { playerIndex: 1 });
-        }
+      // Get the current player index (0 for host, 1 for client)
+      const playerIndex = multiplayerState.playerIndex;
+      
+      // Handle controls for the current player
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        movePiece(playerIndex, -1, 0);
+        sendAction('movePiece', { playerIndex: playerIndex, dx: -1, dy: 0 });
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        movePiece(playerIndex, 1, 0);
+        sendAction('movePiece', { playerIndex: playerIndex, dx: 1, dy: 0 });
+      }
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        movePiece(playerIndex, 0, 1);
+        sendAction('movePiece', { playerIndex: playerIndex, dx: 0, dy: 1 });
+      }
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        rotatePiece(playerIndex);
+        sendAction('rotatePiece', { playerIndex: playerIndex });
+      }
+      if (e.key === ' ' || e.key === 'Enter') {
+        dropPiece(playerIndex);
+        sendAction('dropPiece', { playerIndex: playerIndex });
+      }
+      if (e.key === 'Shift') {
+        storePiece(playerIndex);
+        sendAction('storePiece', { playerIndex: playerIndex });
       }
     });
 
