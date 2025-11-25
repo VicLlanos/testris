@@ -157,7 +157,7 @@
       font-weight: 700;
     }
 
-    #game-area {
+    .game-area {
       display: flex;
       gap: 20px;
       align-items: flex-start;
@@ -505,7 +505,7 @@
     }
 
     @media (max-width: 768px) {
-      #game-area {
+      .game-area {
         flex-direction: column;
         align-items: center;
       }
@@ -611,7 +611,7 @@
           </div>
         </div>
         
-        <div id="game-area">
+        <div class="game-area">
           <div class="game-board-container">
             <div id="player1-board" class="game-board"></div>
           </div>
@@ -657,7 +657,7 @@
           </div>
         </div>
         
-        <div id="game-area">
+        <div class="game-area">
           <div class="game-board-container">
             <div id="player2-board" class="game-board"></div>
           </div>
@@ -774,13 +774,48 @@
     let garbageQueue = [0, 0]; // Garbage lines to be sent to each player
 
     const tetrominoes = [
-      { shape: [[1, 1, 1, 1]], color: 'I' }, // I
-      { shape: [[1, 1], [1, 1]], color: 'O' }, // O
-      { shape: [[0, 1, 0], [1, 1, 1]], color: 'T' }, // T
-      { shape: [[1, 1, 0], [0, 1, 1]], color: 'S' }, // S
-      { shape: [[0, 1, 1], [1, 1, 0]], color: 'Z' }, // Z
-      { shape: [[1, 0, 0], [1, 1, 1]], color: 'J' }, // J
-      { shape: [[0, 0, 1], [1, 1, 1]], color: 'L' }  // L
+      { 
+        shape: [[1, 1, 1, 1]], 
+        color: 'I',
+        width: 4,
+        height: 1
+      }, // I
+      { 
+        shape: [[1, 1], [1, 1]], 
+        color: 'O',
+        width: 2,
+        height: 2
+      }, // O
+      { 
+        shape: [[0, 1, 0], [1, 1, 1]], 
+        color: 'T',
+        width: 3,
+        height: 2
+      }, // T
+      { 
+        shape: [[0, 1, 1], [1, 1, 0]], 
+        color: 'S',
+        width: 3,
+        height: 2
+      }, // S
+      { 
+        shape: [[1, 1, 0], [0, 1, 1]], 
+        color: 'Z',
+        width: 3,
+        height: 2
+      }, // Z
+      { 
+        shape: [[1, 0, 0], [1, 1, 1]], 
+        color: 'J',
+        width: 3,
+        height: 2
+      }, // J
+      { 
+        shape: [[0, 0, 1], [1, 1, 1]], 
+        color: 'L',
+        width: 3,
+        height: 2
+      }  // L
     ];
 
     // DOM Elements
@@ -898,6 +933,7 @@
         player.nextPiece = createPiece();
         drawNextBoard(index);
         drawBoard(index);
+        drawHoldBoard(index);
         player.lastTime = performance.now();
       });
 
@@ -933,9 +969,18 @@
       switch (data.type) {
         case 'gameState':
           if (!multiplayerState.isHost) {
-            Object.assign(players, data.state);
+            // Update the game state for both players
+            for (let i = 0; i < players.length; i++) {
+              Object.assign(players[i], data.state[i]);
+            }
             garbageQueue = data.garbageQueue || [0, 0];
             updateUI();
+            // Redraw all boards
+            players.forEach((player, index) => {
+              drawBoard(index);
+              drawNextBoard(index);
+              drawHoldBoard(index);
+            });
           }
           break;
         case 'action':
@@ -958,6 +1003,7 @@
               player.nextPiece = createPiece();
               drawNextBoard(index);
               drawBoard(index);
+              drawHoldBoard(index);
               player.lastTime = performance.now();
             });
             
@@ -1014,18 +1060,23 @@
 
     // Game Functions
     function createPiece() {
-      const piece = tetrominoes[Math.floor(Math.random() * tetrominoes.length)];
+      const pieceIndex = Math.floor(Math.random() * tetrominoes.length);
+      const piece = tetrominoes[pieceIndex];
       return {
         shape: piece.shape.map(row => [...row]),
         color: piece.color,
-        x: Math.floor((BOARD_WIDTH - piece.shape[0].length) / 2),
+        x: Math.floor((BOARD_WIDTH - piece.width) / 2),
         y: 0
       };
     }
 
     function getGhostPosition(playerIndex) {
       const player = players[playerIndex];
-      const ghost = { ...player.currentPiece, y: player.currentPiece.y };
+      const ghost = { 
+        ...player.currentPiece, 
+        shape: player.currentPiece.shape.map(row => [...row]),
+        y: player.currentPiece.y 
+      };
       
       while (!isCollision(playerIndex, ghost)) {
         ghost.y++;
@@ -1152,9 +1203,11 @@
             checkGameOver();
           }
         }
+        return false;
       }
       
       drawBoard(playerIndex);
+      return true;
     }
 
     function rotatePiece(playerIndex) {
@@ -1178,19 +1231,20 @@
     function isCollision(playerIndex, piece = players[playerIndex].currentPiece) {
       const player = players[playerIndex];
       
-      return piece.shape.some((row, y) =>
-        row.some((value, x) => {
-          const boardY = piece.y + y;
-          const boardX = piece.x + x;
-          
-          return (value && (
-            boardY >= BOARD_HEIGHT ||
-            boardX < 0 ||
-            boardX >= BOARD_WIDTH ||
-            (boardY >= 0 && player.board[boardY][boardX])
-          ));
-        })
-      );
+      for (let y = 0; y < piece.shape.length; y++) {
+        for (let x = 0; x < piece.shape[y].length; x++) {
+          if (piece.shape[y][x]) {
+            const boardY = piece.y + y;
+            const boardX = piece.x + x;
+            
+            if (boardY >= BOARD_HEIGHT || boardX < 0 || boardX >= BOARD_WIDTH ||
+                (boardY >= 0 && player.board[boardY][boardX])) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     }
 
     function placePiece(playerIndex) {
@@ -1216,10 +1270,12 @@
       
       for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
         if (player.board[y].every(cell => cell)) {
+          // Remove the line
           player.board.splice(y, 1);
+          // Add a new empty line at the top
           player.board.unshift(Array(BOARD_WIDTH).fill(0));
           linesCleared++;
-          y++;
+          y++; // Check the same line again since we shifted everything down
         }
       }
       
@@ -1327,6 +1383,7 @@
 
     function togglePause() {
       isPaused = !isPaused;
+      document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none';
       
       if (!isPaused) {
         players.forEach((player, index) => {
@@ -1385,6 +1442,7 @@
       garbageQueue = [0, 0];
       isPaused = false;
       gameOverEl.style.display = 'none';
+      document.getElementById('pause-screen').style.display = 'none';
       
       players.forEach((player, index) => {
         player.lastTime = performance.now();
@@ -1449,27 +1507,39 @@
       // Handle controls for the current player
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         movePiece(playerIndex, -1, 0);
-        sendAction('movePiece', { playerIndex: playerIndex, dx: -1, dy: 0 });
+        if (multiplayerState.isHost) {
+          sendAction('movePiece', { playerIndex: playerIndex, dx: -1, dy: 0 });
+        }
       }
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         movePiece(playerIndex, 1, 0);
-        sendAction('movePiece', { playerIndex: playerIndex, dx: 1, dy: 0 });
+        if (multiplayerState.isHost) {
+          sendAction('movePiece', { playerIndex: playerIndex, dx: 1, dy: 0 });
+        }
       }
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
         movePiece(playerIndex, 0, 1);
-        sendAction('movePiece', { playerIndex: playerIndex, dx: 0, dy: 1 });
+        if (multiplayerState.isHost) {
+          sendAction('movePiece', { playerIndex: playerIndex, dx: 0, dy: 1 });
+        }
       }
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         rotatePiece(playerIndex);
-        sendAction('rotatePiece', { playerIndex: playerIndex });
+        if (multiplayerState.isHost) {
+          sendAction('rotatePiece', { playerIndex: playerIndex });
+        }
       }
       if (e.key === ' ' || e.key === 'Enter') {
         dropPiece(playerIndex);
-        sendAction('dropPiece', { playerIndex: playerIndex });
+        if (multiplayerState.isHost) {
+          sendAction('dropPiece', { playerIndex: playerIndex });
+        }
       }
       if (e.key === 'Shift') {
         storePiece(playerIndex);
-        sendAction('storePiece', { playerIndex: playerIndex });
+        if (multiplayerState.isHost) {
+          sendAction('storePiece', { playerIndex: playerIndex });
+        }
       }
     });
 
