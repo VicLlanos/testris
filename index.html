@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiplayer Tetris Challenge</title>
+  <title>Battle Tetris: Multiplayer Challenge</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
     
@@ -170,6 +170,7 @@
       flex-direction: column;
       align-items: center;
       gap: 10px;
+      position: relative;
     }
 
     .game-board {
@@ -182,6 +183,7 @@
       padding: 8px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
     }
 
     .player1 .game-board {
@@ -517,9 +519,198 @@
       margin: 20px 0;
     }
 
+    /* New Battle System Styles */
+    .attack-indicator {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary-color);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 10;
+      animation: attackIndicator 1s ease-out;
+    }
+    
+    @keyframes attackIndicator {
+      0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    }
+    
+    .incoming-attack {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 107, 107, 0.3);
+      border: 2px solid var(--primary-color);
+      border-radius: 8px;
+      padding: 10px;
+      color: white;
+      font-weight: 600;
+      z-index: 5;
+      animation: pulseAttack 0.5s infinite alternate;
+    }
+    
+    @keyframes pulseAttack {
+      from { border-color: var(--primary-color); }
+      to { border-color: var(--accent-color); }
+    }
+    
+    .combo-counter {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--accent-color);
+      text-shadow: 0 0 20px rgba(255, 230, 109, 0.8);
+      opacity: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
+    
+    @keyframes comboPop {
+      0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+    
     .garbage-line {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px dashed rgba(255, 255, 255, 0.5);
+      background: linear-gradient(45deg, rgba(255, 107, 107, 0.3), rgba(231, 76, 60, 0.3));
+      border: 1px dashed rgba(255, 107, 107, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .garbage-line::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, 
+        transparent 30%, 
+        rgba(255, 255, 255, 0.2) 50%, 
+        transparent 70%);
+      animation: garbageShine 2s infinite;
+    }
+    
+    @keyframes garbageShine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .attack-effect {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255, 107, 107, 0.3) 0%, transparent 70%);
+      animation: attackEffect 0.5s ease-out;
+      pointer-events: none;
+      z-index: 15;
+    }
+    
+    @keyframes attackEffect {
+      0% { opacity: 1; transform: scale(0.5); }
+      100% { opacity: 0; transform: scale(1.5); }
+    }
+    
+    .stats-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 8px;
+      min-width: 120px;
+    }
+    
+    .attack-power {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    
+    .attack-power-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #FF6B6B, #FFE66D);
+      border-radius: 5px;
+      transition: width 0.3s ease;
+    }
+    
+    .battle-status {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 15px;
+      gap: 10px;
+    }
+    
+    .player-battle-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 15px;
+      border-radius: 10px;
+      flex: 1;
+    }
+    
+    .player1 .player-battle-info {
+      border: 2px solid var(--player1-color);
+    }
+    
+    .player2 .player-battle-info {
+      border: 2px solid var(--player2-color);
+    }
+    
+    .battle-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-top: 5px;
+    }
+    
+    .battle-label {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 0.5s ease;
+    }
+
+    .clear-row {
+      animation: clearAnimation 0.3s ease-out;
+    }
+
+    @keyframes clearAnimation {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+
+    .hold-flash {
+      animation: holdFlash 0.3s ease;
+    }
+
+    @keyframes holdFlash {
+      0% { background-color: rgba(255, 230, 109, 0.3); }
+      100% { background-color: transparent; }
     }
 
     @media (max-width: 1024px) {
@@ -563,6 +754,11 @@
         gap: 10px;
         align-items: center;
       }
+      
+      .battle-status {
+        flex-direction: column;
+        gap: 5px;
+      }
     }
 
     @media (max-height: 700px) {
@@ -576,43 +772,13 @@
         grid-template-rows: repeat(4, min(3.5vh, 25px));
       }
     }
-
-    /* Animations */
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-
-    .pulse {
-      animation: pulse 0.5s ease;
-    }
-
-    .clear-row {
-      animation: clearAnimation 0.3s ease-out;
-    }
-
-    @keyframes clearAnimation {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.8; }
-      100% { transform: scale(0); opacity: 0; }
-    }
-
-    .hold-flash {
-      animation: holdFlash 0.3s ease;
-    }
-
-    @keyframes holdFlash {
-      0% { background-color: rgba(255, 230, 109, 0.3); }
-      100% { background-color: transparent; }
-    }
   </style>
 </head>
 <body>
   <div id="game-container">
     <button class="how-to-play" onclick="showInstructions()">?</button>
     
-    <h1 class="game-title">Multiplayer Tetris Challenge</h1>
+    <h1 class="game-title">Battle Tetris: Multiplayer Challenge</h1>
     
     <div class="multiplayer-section">
       <div class="mb-3">
@@ -654,9 +820,27 @@
           </div>
         </div>
         
+        <div class="battle-status">
+          <div class="player-battle-info">
+            <div class="battle-label">COMBO</div>
+            <div id="player1-combo" class="battle-value">0x</div>
+          </div>
+          <div class="player-battle-info">
+            <div class="battle-label">ATTACK POWER</div>
+            <div class="attack-power">
+              <div id="player1-attack-power" class="attack-power-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="player-battle-info">
+            <div class="battle-label">INCOMING</div>
+            <div id="player1-incoming" class="battle-value">0</div>
+          </div>
+        </div>
+        
         <div class="game-area">
           <div class="game-board-container">
             <div id="player1-board" class="game-board"></div>
+            <div id="player1-combo-display" class="combo-counter"></div>
           </div>
           <div class="side-panel">
             <div class="panel-box">
@@ -702,9 +886,27 @@
           </div>
         </div>
         
+        <div class="battle-status">
+          <div class="player-battle-info">
+            <div class="battle-label">COMBO</div>
+            <div id="player2-combo" class="battle-value">0x</div>
+          </div>
+          <div class="player-battle-info">
+            <div class="battle-label">ATTACK POWER</div>
+            <div class="attack-power">
+              <div id="player2-attack-power" class="attack-power-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="player-battle-info">
+            <div class="battle-label">INCOMING</div>
+            <div id="player2-incoming" class="battle-value">0</div>
+          </div>
+        </div>
+        
         <div class="game-area">
           <div class="game-board-container">
             <div id="player2-board" class="game-board"></div>
+            <div id="player2-combo-display" class="combo-counter"></div>
           </div>
           <div class="side-panel">
             <div class="panel-box">
@@ -751,7 +953,7 @@
   </div>
   
   <div id="instructions">
-    <h2>HOW TO PLAY MULTIPLAYER TETRIS</h2>
+    <h2>BATTLE TETRIS: HOW TO PLAY</h2>
     <h3>Controls (Both Players)</h3>
     <ul>
       <li><strong>← →</strong> Move piece left/right</li>
@@ -761,8 +963,15 @@
       <li><strong>SHIFT</strong> Hold piece (store for later use)</li>
       <li><strong>P</strong> Pause game</li>
     </ul>
-    <h3>Hold Feature</h3>
-    <p>Press SHIFT (or the HOLD button on mobile) to store your current piece for later use. You can only use the hold feature once per piece placement.</p>
+    <h3>Battle System</h3>
+    <ul>
+      <li><strong>Attack Power</strong>: Clearing lines builds attack power</li>
+      <li><strong>Combos</strong>: Clear lines quickly to increase combo multiplier</li>
+      <li><strong>Attacks</strong>: When attack power reaches 100%, send garbage to opponent</li>
+      <li><strong>Garbage Lines</strong>: Attack your opponent with incomplete lines</li>
+      <li><strong>Defense</strong>: Clear garbage lines to survive</li>
+    </ul>
+    <p><strong>Tip</strong>: Chain combos to send stronger attacks and overwhelm your opponent!</p>
     <button onclick="hideInstructions()" class="close-btn">GOT IT!</button>
   </div>
 
@@ -774,6 +983,11 @@
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 20;
     const PLAYER_COUNT = 2;
+
+    // Battle System Constants
+    const ATTACK_POWER_PER_LINE = 25; // Each line gives 25% attack power
+    const MAX_COMBO = 5; // Maximum combo multiplier
+    const COMBO_TIMEOUT = 2000; // Combo timeout in milliseconds
 
     // Multiplayer State
     const multiplayerState = {
@@ -800,7 +1014,14 @@
         lines: 0,
         dropInterval: 1000,
         lastTime: 0,
-        isGameOver: false
+        isGameOver: false,
+        // Battle properties
+        attackPower: 0,
+        combo: 0,
+        comboTimer: null,
+        lastClearTime: 0,
+        incomingAttack: 0,
+        attackQueue: []
       },
       {
         board: Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0)),
@@ -813,13 +1034,19 @@
         lines: 0,
         dropInterval: 1000,
         lastTime: 0,
-        isGameOver: false
+        isGameOver: false,
+        // Battle properties
+        attackPower: 0,
+        combo: 0,
+        comboTimer: null,
+        lastClearTime: 0,
+        incomingAttack: 0,
+        attackQueue: []
       }
     ];
 
     let isPaused = false;
     let animationFrameId;
-    let garbageQueue = [0, 0]; // Garbage lines to be sent to each player
 
     const tetrominoes = [
       { 
@@ -878,6 +1105,16 @@
     const controlsEl = document.getElementById('controls');
     const gameOverEl = document.getElementById('game-over');
     const winnerEl = document.getElementById('winner');
+
+    // Battle-related DOM elements
+    const player1ComboEl = document.getElementById('player1-combo');
+    const player2ComboEl = document.getElementById('player2-combo');
+    const player1AttackPowerEl = document.getElementById('player1-attack-power');
+    const player2AttackPowerEl = document.getElementById('player2-attack-power');
+    const player1IncomingEl = document.getElementById('player1-incoming');
+    const player2IncomingEl = document.getElementById('player2-incoming');
+    const player1ComboDisplayEl = document.getElementById('player1-combo-display');
+    const player2ComboDisplayEl = document.getElementById('player2-combo-display');
 
     // Multiplayer Functions
     function initializeMultiplayer() {
@@ -984,8 +1221,17 @@
         drawHoldBoard(index);
         updateHoldButton(index);
         player.lastTime = performance.now();
+        
+        // Initialize battle properties
+        player.attackPower = 0;
+        player.combo = 0;
+        player.incomingAttack = 0;
+        player.attackQueue = [];
       });
 
+      // Initialize battle displays
+      initBattleDisplays();
+      
       // Start game loop
       gameLoop(performance.now());
 
@@ -1000,7 +1246,7 @@
       multiplayerState.conn.send({
         type: 'gameState',
         state: players,
-        garbageQueue: garbageQueue
+        sender: multiplayerState.isHost ? 'host' : 'client'
       });
     }
 
@@ -1014,15 +1260,25 @@
       });
     }
 
+    function sendAttack(targetPlayerIndex, strength) {
+      if (!multiplayerState.isConnected) return;
+      
+      multiplayerState.conn.send({
+        type: 'attack',
+        target: targetPlayerIndex,
+        strength: strength,
+        sender: multiplayerState.playerIndex
+      });
+    }
+
     function handleIncomingData(data) {
       switch (data.type) {
         case 'gameState':
-          if (!multiplayerState.isHost) {
+          if (!multiplayerState.isHost && data.sender === 'host') {
             // Update the game state for both players
             for (let i = 0; i < players.length; i++) {
               Object.assign(players[i], data.state[i]);
             }
-            garbageQueue = data.garbageQueue || [0, 0];
             updateUI();
             // Redraw all boards
             players.forEach((player, index) => {
@@ -1035,6 +1291,21 @@
           break;
         case 'action':
           handleRemoteAction(data.action, data.data, data.sender);
+          break;
+        case 'attack':
+          // Queue the attack
+          const playerIndex = data.target;
+          players[playerIndex].attackQueue.push({
+            strength: data.strength,
+            sender: data.sender
+          });
+          
+          // Update incoming attack display
+          players[playerIndex].incomingAttack = players[playerIndex].attackQueue.reduce((sum, attack) => sum + attack.strength, 0);
+          document.getElementById(`player${playerIndex + 1}-incoming`).textContent = players[playerIndex].incomingAttack;
+          
+          // Show incoming warning
+          showIncomingWarning(playerIndex, data.strength);
           break;
       }
     }
@@ -1056,7 +1327,16 @@
               drawHoldBoard(index);
               updateHoldButton(index);
               player.lastTime = performance.now();
+              
+              // Initialize battle properties
+              player.attackPower = 0;
+              player.combo = 0;
+              player.incomingAttack = 0;
+              player.attackQueue = [];
             });
+            
+            // Initialize battle displays
+            initBattleDisplays();
             
             gameLoop(performance.now());
           }
@@ -1149,16 +1429,20 @@
           const cell = document.createElement('div');
           cell.classList.add('cell');
           
-          const isPlaced = player.board[y][x];
+          const cellContent = player.board[y][x];
+          const isPlaced = cellContent && cellContent !== 'G';
+          const isGarbage = cellContent === 'G';
           const isCurrent = player.currentPiece && 
                            player.currentPiece.shape[y - player.currentPiece.y]?.[x - player.currentPiece.x];
           const isGhost = ghost && 
                          ghost.shape[y - ghost.y]?.[x - ghost.x];
           
-          if (isPlaced) {
-            cell.style.backgroundColor = getColor(isPlaced);
+          if (isGarbage) {
+            cell.classList.add('garbage-line');
+          } else if (isPlaced) {
+            cell.style.backgroundColor = getColor(cellContent);
             cell.classList.add('tetromino');
-            cell.classList.add(isPlaced);
+            cell.classList.add(cellContent);
           } else if (isGhost && !isCurrent) {
             cell.style.backgroundColor = getColor(player.currentPiece.color);
             cell.classList.add('ghost');
@@ -1339,24 +1623,49 @@
       });
     }
 
+    // Battle System Functions
     function clearLines(playerIndex) {
       const player = players[playerIndex];
       let linesCleared = 0;
+      const rowsToClear = [];
       
+      // Find complete rows (excluding garbage rows)
       for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-        if (player.board[y].every(cell => cell)) {
-          // Remove the line
-          player.board.splice(y, 1);
-          // Add a new empty line at the top
-          player.board.unshift(Array(BOARD_WIDTH).fill(0));
+        if (player.board[y].every(cell => cell && cell !== 'G')) {
+          rowsToClear.push(y);
           linesCleared++;
-          y++; // Check the same line again since we shifted everything down
         }
       }
       
       if (linesCleared > 0) {
+        // Update combo
+        updateCombo(playerIndex, linesCleared);
+        
+        // Remove complete rows
+        rowsToClear.sort((a, b) => a - b);
+        rowsToClear.forEach(row => {
+          player.board.splice(row, 1);
+          player.board.unshift(Array(BOARD_WIDTH).fill(0));
+        });
+        
+        // Calculate attack strength
+        const attackMultiplier = getAttackMultiplier(linesCleared, player.combo);
+        const attackStrength = Math.floor(linesCleared * attackMultiplier);
+        
+        // Increase attack power
+        player.attackPower = Math.min(100, player.attackPower + (linesCleared * ATTACK_POWER_PER_LINE));
+        updateAttackPowerDisplay(playerIndex);
+        
+        // If attack power is 100%, launch attack
+        if (player.attackPower >= 100) {
+          launchAttack(playerIndex, attackStrength);
+          player.attackPower = 0;
+          updateAttackPowerDisplay(playerIndex);
+        }
+        
         // Update score and level
-        player.score += linesCleared * 100 * player.level;
+        const scoreMultiplier = player.level * (player.combo > 1 ? player.combo : 1);
+        player.score += linesCleared * 100 * scoreMultiplier;
         player.lines += linesCleared;
         
         document.getElementById(`player${playerIndex + 1}-score`).textContent = player.score;
@@ -1369,16 +1678,110 @@
           document.getElementById(`player${playerIndex + 1}-level`).textContent = player.level;
         }
         
-        // Send garbage to opponent
-        const opponentIndex = (playerIndex + 1) % PLAYER_COUNT;
-        garbageQueue[opponentIndex] += linesCleared;
+        // Show attack indicator
+        showAttackIndicator(playerIndex, linesCleared, attackStrength);
         
-        // Add garbage lines to opponent
-        if (garbageQueue[opponentIndex] > 0) {
-          addGarbageLines(opponentIndex, garbageQueue[opponentIndex]);
-          garbageQueue[opponentIndex] = 0;
+        // Send attack to opponent if multiplayer
+        if (multiplayerState.gameStarted && multiplayerState.isHost) {
+          const opponentIndex = (playerIndex + 1) % PLAYER_COUNT;
+          sendAttack(opponentIndex, attackStrength);
         }
       }
+      
+      // Process any incoming attacks
+      processIncomingAttacks(playerIndex);
+    }
+
+    function updateCombo(playerIndex, linesCleared) {
+      const player = players[playerIndex];
+      const currentTime = Date.now();
+      
+      // Reset combo timer
+      if (player.comboTimer) {
+        clearTimeout(player.comboTimer);
+      }
+      
+      // Increase combo if within combo window
+      if (currentTime - player.lastClearTime <= COMBO_TIMEOUT) {
+        player.combo = Math.min(MAX_COMBO, player.combo + 1);
+      } else {
+        player.combo = 1;
+      }
+      
+      player.lastClearTime = currentTime;
+      
+      // Show combo display
+      const comboDisplayEl = document.getElementById(`player${playerIndex + 1}-combo-display`);
+      comboDisplayEl.textContent = `${player.combo}x COMBO!`;
+      comboDisplayEl.style.animation = 'none';
+      void comboDisplayEl.offsetWidth;
+      comboDisplayEl.style.animation = 'comboPop 0.8s ease-out';
+      
+      // Update combo UI
+      document.getElementById(`player${playerIndex + 1}-combo`).textContent = `${player.combo}x`;
+      
+      // Set combo timer to reset combo
+      player.comboTimer = setTimeout(() => {
+        player.combo = 0;
+        document.getElementById(`player${playerIndex + 1}-combo`).textContent = '0x';
+      }, COMBO_TIMEOUT);
+    }
+
+    function getAttackMultiplier(lines, combo) {
+      let multiplier = 1;
+      
+      // Base multiplier based on lines cleared
+      switch(lines) {
+        case 1: multiplier = 1; break;
+        case 2: multiplier = 1.5; break;
+        case 3: multiplier = 2; break;
+        case 4: multiplier = 3; break;
+      }
+      
+      // Add combo bonus
+      if (combo > 1) {
+        multiplier *= (1 + (combo * 0.2));
+      }
+      
+      return multiplier;
+    }
+
+    function updateAttackPowerDisplay(playerIndex) {
+      const player = players[playerIndex];
+      const attackPowerEl = document.getElementById(`player${playerIndex + 1}-attack-power`);
+      attackPowerEl.style.width = `${player.attackPower}%`;
+    }
+
+    function launchAttack(playerIndex, strength) {
+      const player = players[playerIndex];
+      
+      // Show launch effect
+      const boardEl = document.getElementById(`player${playerIndex + 1}-board`);
+      const attackEffect = document.createElement('div');
+      attackEffect.className = 'attack-effect';
+      boardEl.appendChild(attackEffect);
+      
+      setTimeout(() => {
+        attackEffect.remove();
+      }, 500);
+      
+      // Create attack indicator
+      showAttackIndicator(playerIndex, 'FULL POWER!', strength);
+    }
+
+    function processIncomingAttacks(playerIndex) {
+      const player = players[playerIndex];
+      
+      // Process all queued attacks
+      while (player.attackQueue.length > 0) {
+        const attack = player.attackQueue.shift();
+        addGarbageLines(playerIndex, attack.strength);
+        showIncomingAttack(playerIndex, attack.strength);
+      }
+      
+      // Update incoming attack display
+      player.incomingAttack = player.attackQueue.reduce((sum, attack) => sum + attack.strength, 0);
+      document.getElementById(`player${playerIndex + 1}-incoming`).textContent = player.incomingAttack;
     }
 
     function addGarbageLines(playerIndex, lines) {
@@ -1400,6 +1803,46 @@
       drawBoard(playerIndex);
     }
 
+    function showAttackIndicator(playerIndex, lines, strength) {
+      const boardContainer = document.querySelector(`#player${playerIndex + 1}-board`).parentElement;
+      const indicator = document.createElement('div');
+      indicator.className = 'attack-indicator';
+      indicator.textContent = `${lines} lines → ${strength} attack!`;
+      boardContainer.appendChild(indicator);
+      
+      setTimeout(() => {
+        indicator.remove();
+      }, 1000);
+    }
+
+    function showIncomingAttack(playerIndex, strength) {
+      const boardEl = document.getElementById(`player${playerIndex + 1}-board`);
+      const incomingEl = document.createElement('div');
+      incomingEl.className = 'incoming-attack';
+      incomingEl.textContent = `+${strength} ATTACK!`;
+      boardEl.parentElement.appendChild(incomingEl);
+      
+      setTimeout(() => {
+        incomingEl.remove();
+      }, 1500);
+    }
+
+    function showIncomingWarning(playerIndex, strength) {
+      const incomingEl = document.getElementById(`player${playerIndex + 1}-incoming`);
+      incomingEl.classList.add('pulse');
+      setTimeout(() => {
+        incomingEl.classList.remove('pulse');
+      }, 500);
+    }
+
+    function initBattleDisplays() {
+      players.forEach((player, index) => {
+        document.getElementById(`player${index + 1}-combo`).textContent = '0x';
+        document.getElementById(`player${index + 1}-incoming`).textContent = '0';
+        document.getElementById(`player${index + 1}-attack-power`).style.width = '0%';
+      });
+    }
+
     function dropPiece(playerIndex) {
       if (isPaused || players[playerIndex].isGameOver || !multiplayerState.gameStarted) return;
       
@@ -1414,7 +1857,7 @@
       clearLines(playerIndex);
       player.currentPiece = player.nextPiece;
       player.nextPiece = createPiece();
-      player.canStorePiece = true; // Reset hold availability
+      player.canStorePiece = true;
       drawNextBoard(playerIndex);
       updateHoldButton(playerIndex);
       
@@ -1516,9 +1959,24 @@
         player.isGameOver = false;
         player.dropInterval = 1000;
         
+        // Reset battle properties
+        player.attackPower = 0;
+        player.combo = 0;
+        player.incomingAttack = 0;
+        player.attackQueue = [];
+        
+        // Clear combo timer
+        if (player.comboTimer) {
+          clearTimeout(player.comboTimer);
+          player.comboTimer = null;
+        }
+        
         document.getElementById(`player${index + 1}-score`).textContent = player.score;
         document.getElementById(`player${index + 1}-level`).textContent = player.level;
         document.getElementById(`player${index + 1}-lines`).textContent = player.lines;
+        document.getElementById(`player${index + 1}-combo`).textContent = '0x';
+        document.getElementById(`player${index + 1}-incoming`).textContent = '0';
+        document.getElementById(`player${index + 1}-attack-power`).style.width = '0%';
         
         drawHoldBoard(index);
         updateHoldButton(index);
@@ -1530,7 +1988,6 @@
         drawBoard(index);
       });
       
-      garbageQueue = [0, 0];
       isPaused = false;
       gameOverEl.style.display = 'none';
       document.getElementById('pause-screen').style.display = 'none';
@@ -1572,6 +2029,9 @@
         document.getElementById(`player${index + 1}-score`).textContent = player.score;
         document.getElementById(`player${index + 1}-level`).textContent = player.level;
         document.getElementById(`player${index + 1}-lines`).textContent = player.lines;
+        document.getElementById(`player${index + 1}-combo`).textContent = `${player.combo}x`;
+        document.getElementById(`player${index + 1}-incoming`).textContent = player.incomingAttack;
+        document.getElementById(`player${index + 1}-attack-power`).style.width = `${player.attackPower}%`;
       });
     }
 
